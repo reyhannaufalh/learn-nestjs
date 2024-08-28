@@ -4,6 +4,7 @@ import {
   Header,
   HttpCode,
   HttpRedirectResponse,
+  Inject,
   Param,
   Post,
   Query,
@@ -12,17 +13,37 @@ import {
   Res,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { UserService } from './user/user.service';
+import { Connection } from './connection/connection';
+import { MailService } from './mail/mail.service';
+import { UserRepository } from './user-repository/user-repository';
 
 @Controller('/api/users')
 export class UserController {
+  constructor(
+    private service: UserService,
+    private connection: Connection,
+    private mailService: MailService,
+    private userRepository: UserRepository,
+    @Inject('EmailService') private emailService: MailService,
+  ) {}
+
   @Get()
   get(): string {
     return 'GET /users';
   }
 
+  @Get('/connection')
+  async getConnection(): Promise<string> {
+    this.mailService.send();
+    this.userRepository.save();
+    this.emailService.send();
+    return this.connection.getName();
+  }
+
   @Get('/hello')
-  async getByQuery(@Query('name') name: string): Promise<string> {
-    return `Name is ${name}`;
+  async sayHello(@Query('name') name: string): Promise<string> {
+    return this.service.sayHello(name);
   }
 
   @Get('/user/:id')

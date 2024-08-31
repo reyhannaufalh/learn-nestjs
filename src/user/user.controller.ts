@@ -1,16 +1,21 @@
 import {
+  Body,
   Controller,
   Get,
   Header,
   HttpCode,
+  HttpException,
   HttpRedirectResponse,
   Inject,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Redirect,
   Req,
   Res,
+  UseFilters,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UserService } from './user/user.service';
@@ -19,6 +24,13 @@ import { MailService } from './mail/mail.service';
 import { UserRepository } from './user-repository/user-repository';
 import { MemberService } from './member/member.service';
 import { User } from '@prisma/client';
+import { ValidationPipe } from 'src/validation/validation.pipe';
+import {
+  LoginUserRequest,
+  loginUserRequestValidation,
+} from 'src/model/login.model';
+import { ValidationFilter } from 'src/validation/validation.filter';
+import { TimeInterceptor } from 'src/time/time.interceptor';
 
 @Controller('/api/users')
 export class UserController {
@@ -52,16 +64,27 @@ export class UserController {
     @Query('first_name') firstName: string,
     @Query('last_name') lastName: string,
   ): Promise<User> {
+    if (!firstName) {
+      throw new HttpException(
+        {
+          status: 400,
+          error: 'First name is required',
+        },
+        400,
+      );
+    }
+
     return this.userRepository.save(firstName, lastName);
   }
 
   @Get('/hello')
+  // @UseFilters(ValidationFilter)
   async sayHello(@Query('name') name: string): Promise<string> {
     return this.service.sayHello(name);
   }
 
   @Get('/user/:id')
-  getById(@Param('id') id: string): string {
+  getById(@Param('id', ParseIntPipe) id: number): string {
     return `GET /users/${id}`;
   }
 
@@ -105,5 +128,18 @@ export class UserController {
       title: 'Views',
       name: name,
     });
+  }
+
+  @UseFilters(ValidationFilter)
+  @Post('/login')
+  @Header('Content-Type', 'application/json')
+  @UseInterceptors(TimeInterceptor)
+  login(
+    @Body(new ValidationPipe(loginUserRequestValidation))
+    request: LoginUserRequest,
+  ) {
+    return {
+      data: `Hello ${request.username}`,
+    };
   }
 }

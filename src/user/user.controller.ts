@@ -31,6 +31,8 @@ import {
 } from 'src/model/login.model';
 import { ValidationFilter } from 'src/validation/validation.filter';
 import { TimeInterceptor } from 'src/time/time.interceptor';
+import { Auth } from 'src/auth/auth.decorator';
+import { Roles } from 'src/role/role.decorator';
 
 @Controller('/api/users')
 export class UserController {
@@ -140,6 +142,14 @@ export class UserController {
   ) {
     return {
       data: `Hello ${request.username}`,
+    };
+  }
+
+  @Get('/current')
+  @Roles(['admin'])
+  current(@Auth() user: User): Record<string, any> {
+    return {
+      data: `Hello ${user.first_name} ${user.last_name}`,
     };
   }
 }
